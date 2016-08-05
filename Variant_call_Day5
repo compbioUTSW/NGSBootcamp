@@ -1,1 +1,45 @@
-test
+# Structural Variation Analysis
+
+# Very general workflow for structural variant analysis
+# 1. fastq files from your sample
+# 2. Run FastQC for quality control
+#  2a) if qualtify of bases (in particular at the end of reads) are bad, perform trimming.
+#  2b) if there are adapter sequences present in your fastq files, remove adapter sequence.
+# => OK. fastq quality is good. Lets go to step 3
+# 3. Perform Alignemnt using your favorite aligner (e.g., BWA, etc.) and generate SAM or BAM files.
+# 4. Sort bam file and generate an index file for your bam file.
+# 5. Structural Variation calling using your favorite tool
+# 6. Now we have variant calls (e.g., a list of SVs). 
+# 7. Interpretation. Now we have annotated variant calls and need to make sense out of it.
+# 8. It is important to visualize your bam file to double check whether variants called by computational algorithms are real(?).
+# Utilmately, you want to validate your variants using Sanger or etc.
+
+qrsh
+mkdir day5
+cd day5
+cp -R /data/bootcamp/day5/* .
+
+
+# Environmental variables:
+echo 'export PATH=/data/bootcamp/tools/delly-0.7.3/src:/data/bootcamp/tools/delly-0.7.3/src/bcftools:/data/bootcamp/tools/samtools-1.2/bin:/data/bootcamp/tools/jdk1.8.0_101/bin:$PATH' >> $HOME/.bash_profile
+
+# Picard
+echo 'export PICARD_DIRECTORY=/data/bootcamp/tools/picard-tools-1.96' >> $HOME/.bash_profile
+
+# VarScan: Variant Call revisit
+samtools mpileup -f reference/chr19.fa sample_2126_T1.bam > sample_2126_T1.bam.mpileup
+samtools mpileup -f reference/chr19.fa sample_2126_N1.bam > sample_2126_N1.bam.mpileup
+java -jar /data/bootcamp/tools/VarScan.v2.3.8.jar somatic sample_2126_N1.bam.mpileup sample_2126_T1.bam.mpileup sample_2126_T1.bam.VarScan.Somatic.output --min-var-freq 0.02 --normal-purity 0.70 --tumor-purity 0.50
+
+
+#SHEAR:
+# http://bmcgenomics.biomedcentral.com/articles/10.1186/1471-2164-15-84
+
+samtools=/home/thwang/software/samtools-1.2/bin/samtools
+$samtools index sample_2126_T1.bam
+$samtools index sample_2126_N1.bam
+
+java -jar /data/bootcamp/tools/shear-v1.1.2.1/SHEAR.jar sv -p output_sample_2126 -f reference/chr19.fa -b sample_2126_T1.bam --bam-normal sample_2126_N1.bam
+
+
+
